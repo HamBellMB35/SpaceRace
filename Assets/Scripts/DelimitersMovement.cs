@@ -1,12 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
+/// <summary>Scrolls a lane-delimiter object toward the camera at a constant speed.</summary>
 public class DelimitersMovement : MonoBehaviour
 {
-    public float delemeterSpeed;
+    [FormerlySerializedAs("delemeterSpeed")]
+    public float delimiterSpeed;
+
     void Update()
     {
-         transform.Translate(Vector3.forward * - delemeterSpeed * Time.deltaTime);
+        transform.Translate(Vector3.forward * -delimiterSpeed * Time.deltaTime);
     }
 }

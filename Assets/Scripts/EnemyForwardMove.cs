@@ -9,7 +9,6 @@ public class EnemyForwardMove : MonoBehaviour
 
     private void Update()
     {
-        // Test comment
         transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime);
     }
 }

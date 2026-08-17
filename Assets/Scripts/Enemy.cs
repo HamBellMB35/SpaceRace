@@ -1,21 +1,24 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
+/// <summary>Moves an enemy to random points within a bounding box while advancing forward.</summary>
 public class Enemy : MonoBehaviour
-{  
-     public float minX;
+{
+    public float minX;
     public float maxX;
     public float minY;
     public float maxY;
-    public float ManuveringSpeed;
+
+    [FormerlySerializedAs("ManuveringSpeed")]
+    public float maneuveringSpeed;
+
     public float waitTime = 2f;
     public float forwardSpeed;
-    
+
     private float targetX;
     private float targetY;
     private bool isMoving = true;
-    private float timer = 0f;
+    private float timer;
     private float initialWaitTimer;
 
     void Start()
@@ -33,13 +36,13 @@ public class Enemy : MonoBehaviour
     }
 
     private void MoveEnemy()
-    {     
+    {
         if (isMoving)
         {
             // Move towards the target position in x and y axis
             Vector3 currentPosition = transform.position;
             Vector3 targetPosition = new Vector3(targetX, targetY, currentPosition.z);
-            transform.position = Vector3.Lerp(currentPosition, targetPosition, ManuveringSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(currentPosition, targetPosition, maneuveringSpeed * Time.deltaTime);
 
             // If we've reached the target position, start the wait timer
             if (Vector3.Distance(currentPosition, targetPosition) < 0.1f)
@@ -61,9 +64,8 @@ public class Enemy : MonoBehaviour
         }
 
         // Move the object forward in the z-axis
-         transform.position += Vector3.forward * forwardSpeed * Time.deltaTime;
-    }   
-
+        transform.position += Vector3.forward * forwardSpeed * Time.deltaTime;
+    }
 
     private void CalculateNext()
     {

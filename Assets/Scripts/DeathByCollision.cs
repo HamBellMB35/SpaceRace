@@ -1,28 +1,25 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>Destroys this object and spawns an explosion when it hits anything but the barrier.</summary>
 public class DeathByCollision : MonoBehaviour
 {
     public GameObject explosionPrefab;
-    GameObject explosion;
+    private GameObject explosion;
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.tag != "Barrier")
+        if (!other.CompareTag("Barrier"))
         {
             explosion = Instantiate(explosionPrefab, transform.position, Quaternion.identity);
             Destroy(gameObject);
-            StartCoroutine("DestroyExplosion");
+            StartCoroutine(DestroyExplosion());
         }
-       
-       
     }
 
-    IEnumerator DestroyExplosion()
+    private IEnumerator DestroyExplosion()
     {
         yield return new WaitForSeconds(1f);
         Destroy(explosion);
-        
     }
 }
