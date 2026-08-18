@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: -5717930541256519174}
   - component: {fileID: 216344493358604963}
   - component: {fileID: 8714571982568419476}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: LASERPH
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -29,6 +29,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1098142585766582628}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 20}
   m_LocalScale: {x: 0.08620684, y: 0.17241368, z: 0.08620684}
@@ -36,7 +37,6 @@ Transform:
   m_Children:
   - {fileID: 1943186921992700244}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &7067612524960683054
 MeshFilter:
@@ -131,7 +131,7 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
+  m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 112
@@ -173,21 +173,45 @@ PrefabInstance:
       propertyPath: m_Name
       value: FlareBlue
       objectReference: {fileID: 0}
+    - target: {fileID: 101898, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 138672, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 141662, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 158658, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 171508, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 195838, guid: b15ea55270883144facf7804a409c62d, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 452066, guid: b15ea55270883144facf7804a409c62d, type: 3}
       propertyPath: m_RootOrder
       value: -1
       objectReference: {fileID: 0}
     - target: {fileID: 452066, guid: b15ea55270883144facf7804a409c62d, type: 3}
       propertyPath: m_LocalScale.x
-      value: 3.8470495
+      value: 13.340797
       objectReference: {fileID: 0}
     - target: {fileID: 452066, guid: b15ea55270883144facf7804a409c62d, type: 3}
       propertyPath: m_LocalScale.y
-      value: 3.847049
+      value: 13.340796
       objectReference: {fileID: 0}
     - target: {fileID: 452066, guid: b15ea55270883144facf7804a409c62d, type: 3}
       propertyPath: m_LocalScale.z
-      value: 3.8470485
+      value: 13.340795
       objectReference: {fileID: 0}
     - target: {fileID: 452066, guid: b15ea55270883144facf7804a409c62d, type: 3}
       propertyPath: m_LocalPosition.x
