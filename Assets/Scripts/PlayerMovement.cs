@@ -39,8 +39,20 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Constant forward speed - this is what makes the ship feel like it's always advancing, regardless of left/right/up/down input.")]
     public float forwardSpeed = 8f;
 
-    [Header("Play Area Bounds")]
-    [Tooltip("The ship is clamped inside this box on the X/Y plane so it can't fly off past the edges of the playfield. min must be less than max on both axes - see OnValidate below.")]
+    [Header("Play Area Bounds (SAFETY LIMIT, not the track edge)")]
+    // These fields USED to double as "where the track visually is," which
+    // is exactly why they drifted out of sync with the real track geometry
+    // (they weren't even centered on the same X where map chunks actually
+    // spawn). Now the ship is meant to be able to actually leave the track
+    // on purpose - that's the whole point of the new TrackBounds.cs
+    // component, which is what TrackEdgeVignette warns against these days.
+    // These fields still exist and still clamp movement, but only as a
+    // generous SAFETY NET - stopping the ship from flying off into literal
+    // infinity if a player holds input in one direction forever - not as
+    // the real track boundary. Set these MUCH wider than TrackBounds'
+    // pathMinX/pathMaxX/pathMinY/pathMaxY so the ship has real room to
+    // drift off-path before this safety limit ever kicks in.
+    [Tooltip("A generous safety limit, NOT the real track edge (see TrackBounds.cs for that) - just stops the ship from flying infinitely far off-path. Set this noticeably wider than TrackBounds' path bounds. min must be less than max on both axes - see OnValidate below.")]
     public float minMovementX = -10f;
     public float maxMovementX = 10f;
     public float minMovementY = -10f;

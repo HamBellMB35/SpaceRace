@@ -9,10 +9,14 @@ using UnityEngine.UI;
 // TrackPositionMeter.cs (precise numbers) and TrackBoundaryRails.cs (the
 // wall itself, visible in 3D) rather than trying to be all three at once.
 //
-// Reads directly from PlayerMovement's own bounds fields rather than
-// having its own separate copy of "where are the walls" - if you ever
-// retune minMovementX/maxMovementX/etc. in the Inspector, this
-// automatically stays in sync without needing to touch this script too.
+// TRACK BOUNDS, changed: this used to read its min/max straight from
+// PlayerMovement's own bounds fields. Those fields now do a DIFFERENT job
+// - they're a wide safety limit stopping the ship from flying off into
+// infinity, not the real track edge - since the ship is now allowed to
+// actually leave the path on purpose. The real track edge lives on the
+// new TrackBounds component instead, which is what this script reads its
+// min/max from now. playerMovement is still needed too, just for a
+// different reason: reading the ship's live position via its Transform.
 //
 // GLOW START FRACTION, now per-edge: this used to be one shared
 // glowStartFraction value driving all four edges identically. That's a
@@ -26,8 +30,11 @@ using UnityEngine.UI;
 // having to compromise on a single shared number.
 public class TrackEdgeVignette : MonoBehaviour
 {
-    [Tooltip("The ship's PlayerMovement component - this is where both the ship's live position AND the track's min/max bounds are read from.")]
+    [Tooltip("The ship's PlayerMovement component - used ONLY to read the ship's live position now (transform.position), not its bounds.")]
     public PlayerMovement playerMovement;
+
+    [Tooltip("The TrackBounds component defining where the real track path actually is - THIS is what the glow warns you about now, not PlayerMovement's own (much wider) safety limit.")]
+    public TrackBounds trackBounds;
 
     [Header("Edge Glow Images")]
     [Tooltip("A UI Image stretched along the LEFT edge of the screen, using the gradient sprite. Glows when the ship is near minMovementX.")]
@@ -66,7 +73,7 @@ public class TrackEdgeVignette : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (playerMovement == null)
+        if (playerMovement == null || trackBounds == null)
         {
             return;
         }
@@ -76,11 +83,22 @@ public class TrackEdgeVignette : MonoBehaviour
         // Mathf.InverseLerp does exactly the math we need here: "given
         // these min/max bounds, where does this value sit between them, as
         // a 0-1 fraction?" 0 means sitting exactly at the min bound, 1
-        // means exactly at the max bound, 0.5 means dead center. This is
-        // the same normalization idea used by TrackPositionMeter.cs and
-        // TrackBoundaryRails.cs, just applied to a different visual.
-        float normalizedX = Mathf.InverseLerp(playerMovement.minMovementX, playerMovement.maxMovementX, shipPosition.x);
-        float normalizedY = Mathf.InverseLerp(playerMovement.minMovementY, playerMovement.maxMovementY, shipPosition.y);
+        // means exactly at the max bound, 0.5 means dead center. The bounds
+        // now come from TrackBounds (the real track path) instead of
+        // PlayerMovement (which is just a wide safety limit these days) -
+        // that's the one line that actually changed here.
+        float normalizedX = Mathf.InverseLerp(trackBounds.pathMinX, trackBounds.pathMaxX, shipPosition.x);
+        float normalizedY = Mathf.InverseLerp(trackBounds.pathMinY, trackBounds.pathMaxY, shipPosition.y);
+
+        // Once the ship actually crosses outside the path (normalized goes
+        // below 0 or above 1), Clamp01 further down would otherwise cap the
+        // glow amount at "fully at the wall" and never show anything MORE
+        // urgent than that. That's fine for this version (a flat maximum
+        // glow while off-path is a perfectly reasonable visual), but it's
+        // worth knowing this is where you'd hook in something stronger -
+        // like a flashing warning or the future life/disqualification
+        // countdown - once the ship is confirmed outside pathMinX..pathMaxX
+        // or pathMinY..pathMaxY rather than just close to the edge of them.
 
         // Split that single 0-1 value per axis into "how close to each of
         // the two walls on that axis," so the left wall and right wall (for

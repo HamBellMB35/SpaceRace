@@ -48,6 +48,19 @@ public class GameManager : MonoBehaviour
     public Text finalScoreText;
     public Text laserCountText;
 
+    [Header("Lives / Out-of-Bounds Penalty")]
+    [Tooltip("How many times the ship can be caught outside the track before it's actually game over. This is completely separate from hitting a real obstacle, which still ends the run instantly regardless of lives remaining.")]
+    public int lives = 3;
+
+    [Tooltip("The three ship-silhouette icons - gets told to update its display every time lives changes, so the UI never has to be manually kept in sync.")]
+    public LivesDisplay livesDisplay;
+
+    [Tooltip("Handles the 'Press Any Key to Continue' message and the big countdown - both the very first one when the game starts, and the one that plays after losing a life.")]
+    public RespawnSequence respawnSequence;
+
+    [Tooltip("Force-stopped the instant the run ends (see EndGame() below) - without this, if the game ends while the ship happens to be out of bounds, its countdown/flash/looping alarm would otherwise keep re-triggering forever, since there'd be no respawn sequence left around to ever turn it off.")]
+    public TrackBoundsPenalty trackBoundsPenalty;
+
     public int laserCount = 30;
 
     private int score;
@@ -80,6 +93,60 @@ public class GameManager : MonoBehaviour
         // AddLasers(), right where each field is actually used, so a
         // GameManager that's never asked to update the UI (like the
         // menu's) never complains about UI fields it was never given.
+        //
+        // livesDisplay IS worth initializing eagerly here though, rather
+        // than waiting for the first life to be lost - otherwise the three
+        // ship icons would just sit at whatever default color they happen
+        // to have in the Editor until the first penalty, instead of
+        // correctly showing all three lives filled in from the very start
+        // of the run.
+        if (livesDisplay != null)
+        {
+            livesDisplay.SetLivesRemaining(lives);
+        }
+    }
+
+    /// <summary>
+    /// Called by TrackBoundsPenalty once the ship has been outside
+    /// TrackBounds for longer than its grace period. Spends one life; if
+    /// that was the last one, this is a real game over (same EndGame() the
+    /// obstacle-collision path already uses). Otherwise, hands off to
+    /// RespawnSequence for the "Press Any Key to Continue" + countdown
+    /// flow, and resets the ship back to the middle of the track so the
+    /// player doesn't resume control still out of bounds and immediately
+    /// lose the next life too.
+    /// </summary>
+    public void LoseLife()
+    {
+        lives--;
+
+        if (livesDisplay == null)
+        {
+            Debug.LogWarning($"[GameManager] 'livesDisplay' isn't assigned on '{name}' - lives are still being tracked correctly, they just aren't shown on screen.", this);
+        }
+        else
+        {
+            livesDisplay.SetLivesRemaining(lives);
+        }
+
+        if (lives <= 0)
+        {
+            EndGame();
+            return;
+        }
+
+        if (respawnSequence == null)
+        {
+            Debug.LogWarning($"[GameManager] 'respawnSequence' isn't assigned on '{name}' - a life was spent, but there's no 'Press Any Key to Continue' flow to hand off to, so the game will just keep running as-is.", this);
+            return;
+        }
+
+        // Passing 'lives' along here (rather than RespawnSequence just
+        // asking GameManager for it later) is what lets RespawnSequence
+        // know WHICH icon to flash once gameplay resumes, without needing
+        // its own reference back to GameManager - it just remembers
+        // whatever number it was handed at the start of this sequence.
+        respawnSequence.BeginRespawnSequence(lives);
     }
 
     /// <summary>Ends the current run: hides gameplay UI and shows the final score screen.</summary>
@@ -87,6 +154,19 @@ public class GameManager : MonoBehaviour
     {
         DisableGameplayUI();
         EnableFinalScoreUI();
+
+        // Covers BOTH ways a run can end while the ship happens to be
+        // outside the track: its own grace timer running out (which
+        // already turns its feedback off right before calling LoseLife(),
+        // so this is mostly a safety net there), and dying to an obstacle
+        // collision mid-flash from a not-yet-expired warning (where
+        // nothing else would ever turn it off at all). Safe to call even
+        // when the ship was never out of bounds in the first place -
+        // ForceStopTracking() just does nothing visible in that case.
+        if (trackBoundsPenalty != null)
+        {
+            trackBoundsPenalty.ForceStopTracking();
+        }
     }
 
     /// <summary>Loads the main gameplay scene.</summary>

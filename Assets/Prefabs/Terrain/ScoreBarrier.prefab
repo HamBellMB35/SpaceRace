@@ -32,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.82, y: 9.9, z: 0}
-  m_LocalScale: {x: 60.92873, y: 21.34189, z: 0.22625999}
+  m_LocalScale: {x: 60.92873, y: 21.34189, z: 0.7937653}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -106,8 +106,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.9979661, y: 1, z: 6.941457}
+  m_Center: {x: -0.0010163033, y: 0, z: 2.9707298}
 --- !u!114 &4736120522567580665
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,7 +143,7 @@ AudioSource:
   SpatializePostEffects: 0
   Priority: 128
   DopplerLevel: 1
-  MinDistance: 1
+  MinDistance: 3.224502
   MaxDistance: 500
   Pan2D: 0
   rolloffMode: 0
@@ -231,4 +231,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 877f6150c5b6d3844a12ef636b28de99, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  laserBonusAmount: 10
+  laserBonusAmount: 3
