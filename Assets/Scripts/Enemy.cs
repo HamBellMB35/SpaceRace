@@ -2,6 +2,21 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>Moves an enemy to random points within a bounding box while advancing forward.</summary>
+/// <remarks>
+/// CHANGED for object pooling: Start() became OnEnable(), and isMoving/
+/// timer are now explicitly reset there too. This script doesn't call
+/// Instantiate()/Destroy() itself, but it lives on the enemy prefab that
+/// Randomizer.cs now spawns through ObjectPoolManager - meaning a given
+/// enemy instance gets reused over and over rather than freshly created
+/// each time. Start() only ever runs once per object, so it can't be
+/// trusted to reset anything on reuse. Field initializers (like
+/// "isMoving = true" below) have the exact same problem for a different
+/// reason: they only run once too, at the object's original construction,
+/// not again each time a pooled instance gets reactivated - so a reused
+/// enemy that happened to be mid-"waiting" when it was last released would
+/// otherwise come back already stuck waiting, instead of moving toward a
+/// fresh target like a brand new enemy would.
+/// </remarks>
 public class Enemy : MonoBehaviour
 {
     public float minX;
@@ -21,8 +36,14 @@ public class Enemy : MonoBehaviour
     private float timer;
     private float initialWaitTimer;
 
-    void Start()
+    private void OnEnable()
     {
+        // Explicitly reset the movement state fields - see the class
+        // comment above for why this can't be left to field initializers
+        // once this object is a pooled, reused instance.
+        isMoving = true;
+        timer = 0f;
+
         // Set initial random target position
         CalculateNext();
 

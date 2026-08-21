@@ -9670,7 +9670,6 @@ GameObject:
   - component: {fileID: 19948998}
   - component: {fileID: 8289192}
   - component: {fileID: 11412406}
-  - component: {fileID: 4454286732977675081}
   m_Layer: 0
   m_Name: YellowFireImpactV2
   m_TagString: Untagged
@@ -14564,15 +14563,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   randomPercent: 10
---- !u!114 &4454286732977675081
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 133064}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 287cd418667d818468630d57db2c8f74, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 

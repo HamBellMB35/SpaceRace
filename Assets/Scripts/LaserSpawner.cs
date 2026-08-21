@@ -217,7 +217,12 @@ public class LaserSpawner : MonoBehaviour
     // per barrel instead of duplicating this block in a loop.
     private void FireFromPoint(Transform point, Vector3 aimPoint)
     {
-        GameObject sphere = Instantiate(spherePrefab, point.position, Quaternion.identity);
+        // CHANGED from Instantiate() to ObjectPoolManager - a shot fires
+        // this often (every single click), so it's exactly the kind of
+        // thing pooling is meant for: reusing a laser sphere instead of
+        // allocating and later garbage-collecting a brand new one every
+        // time the player fires.
+        GameObject sphere = ObjectPoolManager.instance.Spawn(spherePrefab, point.position, Quaternion.identity);
         Rigidbody sphereRb = sphere.GetComponent<Rigidbody>();
 
         Vector3 aimDirection = (aimPoint - point.position).normalized;
@@ -247,6 +252,23 @@ public class LaserSpawner : MonoBehaviour
     private IEnumerator DestroySphere(GameObject sphere, float delay)
     {
         yield return new WaitForSeconds(delay);
-        Destroy(sphere);
+
+        // This is a SAFETY NET for shots that never hit anything and just
+        // fly off into empty space - without it, those would stay active
+        // forever. But a shot that DOES hit something gets released
+        // immediately over on DeathByCollision (assuming that's on the
+        // laser prefab, which explains the exact symptoms this was
+        // fixing) - in that case, by the time this timer runs out a
+        // second later, the sphere has already been released and is
+        // sitting back in its pool as a spare for some OTHER shot to
+        // reuse. IsActive() is what lets this timer tell the difference
+        // and skip cleanly in that case, instead of trying to release the
+        // same object a second time (which, before this fix, was
+        // corrupting the pool and causing MissingReferenceExceptions on
+        // later shots).
+        if (ObjectPoolManager.instance.IsActive(sphere))
+        {
+            ObjectPoolManager.instance.Release(sphere);
+        }
     }
 }
