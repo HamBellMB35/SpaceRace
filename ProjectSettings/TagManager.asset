@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Obstacle
   - Barrier
+  - Laser
   layers:
   - Default
   - TransparentFX

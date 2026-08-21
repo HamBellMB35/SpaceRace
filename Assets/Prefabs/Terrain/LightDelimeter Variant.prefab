@@ -154,6 +154,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5731010267658197747, guid: bb0dcfc33256099499beab1781b0d40a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8832806770582232484, guid: bb0dcfc33256099499beab1781b0d40a, type: 3}
       propertyPath: m_Name
       value: LightDelimeter Variant
@@ -163,7 +167,8 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 27fdb47a9d06ba84f89ac1c72263dd78, type: 2}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 5731010267658197747, guid: bb0dcfc33256099499beab1781b0d40a, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 1715343123542541801, guid: bb0dcfc33256099499beab1781b0d40a, type: 3}
       insertIndex: -1

@@ -50,6 +50,9 @@ public class RespawnSequence : MonoBehaviour
     [Tooltip("How long the post-respawn invulnerability window lasts, in real seconds, starting from the moment control is handed back to the player.")]
     public float respawnInvulnerabilityDuration = 2f;
 
+    [Tooltip("How long the ship is invincible for right when the game FIRST starts, in real seconds, starting from the moment the opening countdown finishes and control is handed to the player. Separate from respawnInvulnerabilityDuration above so you can tune the very first moment of a run differently from a mid-run respawn - e.g. a little longer, to give the player time to get oriented before anything can hurt them.")]
+    public float gameStartInvulnerabilityDuration = 3f;
+
     [Header("UI")]
     [Tooltip("The 'Press Any Key to Continue' message object - only shown after losing a life (not on the very first game-start countdown), and only until the player actually presses something.")]
     public GameObject pressAnyKeyMessage;
@@ -126,6 +129,19 @@ public class RespawnSequence : MonoBehaviour
         SetGameplayPaused(true);
         yield return RunCountdown();
         SetGameplayPaused(false);
+
+        // NEW: this was the actual gap - RespawnRoutine() below already
+        // grants a temporary invulnerability window right as control comes
+        // back after losing a life, but the very FIRST time the game
+        // starts never granted one at all. Placed after SetGameplayPaused
+        // (not before) for the same reason RespawnRoutine does it in that
+        // order too: the window is meant to cover the vulnerable moment
+        // right as the player actually starts moving, not to burn itself
+        // down while nothing can move yet during the countdown.
+        if (playerDeath != null)
+        {
+            playerDeath.GrantInvulnerability(gameStartInvulnerabilityDuration);
+        }
     }
 
     /// <summary>
@@ -305,6 +321,20 @@ public class RespawnSequence : MonoBehaviour
 
         if (trackBoundsPenalty != null)
         {
+            // Only relevant when PAUSING (a respawn is starting): silence
+            // and hide whatever out-of-bounds feedback might currently be
+            // active, right away. This covers dying to an obstacle while
+            // still mid-flash from a not-yet-expired warning - a death
+            // that never goes through TrackBoundsPenalty's own cleanup at
+            // all, so without this, the alarm/flash would otherwise just
+            // keep going, uninterrupted, all the way through the whole
+            // respawn sequence. See ClearActiveFeedback()'s own comment
+            // for the full story.
+            if (paused)
+            {
+                trackBoundsPenalty.ClearActiveFeedback();
+            }
+
             trackBoundsPenalty.isTrackingEnabled = !paused;
         }
     }

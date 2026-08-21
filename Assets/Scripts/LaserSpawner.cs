@@ -150,7 +150,7 @@ public class LaserSpawner : MonoBehaviour
         {
             if (GameManager.gmInstance.laserCount <= 0)
             {
-                AudioSource.PlayClipAtPoint(noAmmoSound, transform.position);
+                PlaySoundWithoutDoppler(noAmmoSound, transform.position);
                 return;
             }
 
@@ -195,7 +195,7 @@ public class LaserSpawner : MonoBehaviour
     // visibly diverge the farther out they travel).
     private void FireLaser(Vector3 aimPoint)
     {
-        AudioSource.PlayClipAtPoint(laserSound, transform.position);
+        PlaySoundWithoutDoppler(laserSound, transform.position);
 
         foreach (Transform point in spawnPoints)
         {
@@ -247,6 +247,54 @@ public class LaserSpawner : MonoBehaviour
         sphereRb.velocity = inheritedVelocity + aimDirection * shootForce;
 
         StartCoroutine(DestroySphere(sphere, 1f));
+    }
+
+    // CHANGED from AudioSource.PlayClipAtPoint to this custom version, for
+    // both the laser-fire sound and the no-ammo sound above. PlayClipAtPoint
+    // is convenient - it spins up its own temporary AudioSource and cleans
+    // itself up automatically - but that temporary AudioSource always keeps
+    // Doppler Level at its default of 1, with no way to change it
+    // afterward. Doppler pitch-shifts a sound based on how fast the camera
+    // (the AudioListener) happens to be moving relative to it at that
+    // instant - and now that explosions trigger real Cinemachine Impulse
+    // screen shake, "the camera moving fast" is happening constantly,
+    // often at the exact same moment a laser fires or hits something. That
+    // combination was producing a horrible "sped up" pitch warble on the
+    // laser sound. This does the same spin-up-a-temporary-AudioSource
+    // trick PlayClipAtPoint does internally, but forces Doppler off first,
+    // exactly like ProximityWoosh.cs's PlaySoundWithControl() does for the
+    // near-miss whoosh sound.
+    private void PlaySoundWithoutDoppler(AudioClip clip, Vector3 position)
+    {
+        if (clip == null)
+        {
+            // Guards against a null AudioClip slot in the Inspector (e.g.
+            // noAmmoSound never got assigned) - skip quietly rather than
+            // throwing, same spirit as the other null-guards already in
+            // this script.
+            return;
+        }
+
+        GameObject tempAudioObject = new GameObject("OneShotAudio_" + clip.name);
+        tempAudioObject.transform.position = position;
+
+        AudioSource tempSource = tempAudioObject.AddComponent<AudioSource>();
+        tempSource.clip = clip;
+
+        // A freshly-added AudioSource defaults to spatialBlend = 0 (a flat
+        // 2D sound, completely ignoring distance) - but the ORIGINAL
+        // AudioSource.PlayClipAtPoint this replaced always played as true
+        // 3D positional audio (spatialBlend = 1), fading a little the
+        // farther the AudioListener (the camera) is from where it's
+        // playing. Setting this back to 1 keeps that same natural
+        // distance falloff behaving exactly like it did before - Doppler
+        // is the ONLY thing this replacement was ever meant to change.
+        tempSource.spatialBlend = 1f;
+
+        tempSource.dopplerLevel = 0f;
+        tempSource.Play();
+
+        Destroy(tempAudioObject, clip.length);
     }
 
     private IEnumerator DestroySphere(GameObject sphere, float delay)

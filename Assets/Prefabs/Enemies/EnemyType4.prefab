@@ -29,6 +29,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4103073188106518889}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.25, y: 0, z: -3.88}
   m_LocalScale: {x: 0.45, y: 0.11249999, z: 0.11249999}
@@ -40,8 +41,8 @@ Transform:
   - {fileID: 5956294665942209700}
   - {fileID: 8863207282062907350}
   - {fileID: 6573084505524955470}
+  - {fileID: 811953548017414188}
   m_Father: {fileID: 0}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &7774481179219040484
 Rigidbody:
@@ -115,7 +116,7 @@ MonoBehaviour:
   maxX: 28
   minY: -2
   maxY: 24
-  ManuveringSpeed: 5
+  maneuveringSpeed: 5
   waitTime: 4
   forwardSpeed: -10
 --- !u!114 &-4480814845439539956
@@ -131,6 +132,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   explosionPrefab: {fileID: 133064, guid: 1de8b42c6540de34fb2c324a58c34a18, type: 3}
+  ignoredLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!114 &724157353492127062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -143,7 +147,79 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58d770154f6471f488aa6b445241aefb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  delemeterSpeed: 500
+  delimiterSpeed: 500
+--- !u!1 &6899924695097465336
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 811953548017414188}
+  - component: {fileID: 7458167989029788756}
+  - component: {fileID: 8340160413780889278}
+  m_Layer: 8
+  m_Name: WooshZone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &811953548017414188
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6899924695097465336}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.3692, y: 0.73840004, z: 0.36924452}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7063298134443963959}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &7458167989029788756
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6899924695097465336}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 46.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8340160413780889278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6899924695097465336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 374452bc32c2c384f9203fac40ce60ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wooshSounds:
+  - {fileID: 8300000, guid: 39df86354c8e5b24dbbb97021e39b66a, type: 3}
+  - {fileID: 8300000, guid: 4f3a48fdf19ddf74b811429c96c0fa1c, type: 3}
+  - {fileID: 8300000, guid: d4dd6fb0130d6dd4d99334a441a15b98, type: 3}
+  volume: 0.6
+  spatialBlend: 0.3
 --- !u!1001 &181349331416516501
 PrefabInstance:
   m_ObjectHideFlags: 0

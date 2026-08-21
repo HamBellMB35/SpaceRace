@@ -32,6 +32,27 @@ public class Randomizer : MonoBehaviour
     [FormerlySerializedAs("ShipSapawnDelay")]
     public float shipSpawnDelay;
 
+    // NEW: stops obstacles/enemies from spawning right on top of the
+    // player - most noticeably right at the very start of a run, before
+    // the player's had any chance to react to something that was never
+    // fairly "approaching" from a distance in the first place. This is
+    // checked fresh every time something's ABOUT to spawn, rather than
+    // only being some special "game start only" logic - which turns out
+    // to be all it needs: once a run gets going, SpaceChunksGenerator
+    // always creates new chunks (and everything inside them) hundreds of
+    // units AHEAD of wherever the player currently is, so this check
+    // naturally never has anything to actually do after the opening
+    // moments - it just quietly stops mattering on its own.
+    [Tooltip("Nothing will spawn closer than this many units to the player's CURRENT position. Mainly matters at the very start of a run; later spawns are already generated far ahead of the player anyway, so this rarely does anything past the opening few seconds.")]
+    public float minSpawnDistanceFromPlayer = 30f;
+
+    // Cached ONCE and shared by every Randomizer instance/reuse, rather
+    // than each pooled chunk re-running GameObject.FindGameObjectWithTag
+    // on every single activation - there's only ever one Player in this
+    // game, and its Transform never changes, so there's no reason to pay
+    // that lookup cost more than once for the whole run.
+    private static Transform cachedPlayerTransform;
+
     private byte obstacleIndex;
     private byte enemyIndex;
 
@@ -41,12 +62,62 @@ public class Randomizer : MonoBehaviour
         StartCoroutine(SpawnEnemies());
     }
 
+    // Finds and caches the player's Transform the first time anything
+    // actually needs it, then just hands back the cached value on every
+    // later call. Using the "Player" tag here (rather than a public
+    // Inspector field) means this works automatically on every chunk
+    // prefab without needing to manually drag a Player reference into
+    // each one by hand.
+    private static Transform GetPlayerTransform()
+    {
+        if (cachedPlayerTransform == null)
+        {
+            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+            if (playerObject != null)
+            {
+                cachedPlayerTransform = playerObject.transform;
+            }
+        }
+
+        return cachedPlayerTransform;
+    }
+
+    // Shared by both spawn methods below - true means "too close, don't
+    // spawn here right now." If the player's Transform can't be found for
+    // some reason, this deliberately falls back to false (allow the
+    // spawn) rather than silently blocking every single spawn in the game
+    // forever just because one lookup failed.
+    private bool IsTooCloseToPlayer(Vector3 spawnPosition)
+    {
+        Transform playerTransform = GetPlayerTransform();
+        if (playerTransform == null)
+        {
+            return false;
+        }
+
+        return Vector3.Distance(spawnPosition, playerTransform.position) < minSpawnDistanceFromPlayer;
+    }
+
     private void RandomizeMapChunk()
     {
         obstacleIndex = (byte)Random.Range(0, obstacles.Length);
 
+        Vector3 spawnPosition = obstaclesSpawnPoints[obstacleIndex].transform.position;
+
+        if (IsTooCloseToPlayer(spawnPosition))
+        {
+            // Deliberately just skip this one spawn rather than trying to
+            // pick a different spawn point - obstacles and their spawn
+            // points are paired together by index (see the class fields
+            // above), so "too close" here just means this particular
+            // chunk activation goes without this particular obstacle,
+            // which is a perfectly fine outcome for the rare early case
+            // this actually triggers.
+            return;
+        }
+
         ObjectPoolManager.instance.Spawn(obstacles[obstacleIndex],
-            obstaclesSpawnPoints[obstacleIndex].transform.position,
+            spawnPosition,
             Quaternion.identity);
     }
 
@@ -54,8 +125,15 @@ public class Randomizer : MonoBehaviour
     {
         enemyIndex = (byte)Random.Range(0, enemies.Length);
 
+        Vector3 spawnPosition = enemiesSpawnPoints[enemyIndex].transform.position;
+
+        if (IsTooCloseToPlayer(spawnPosition))
+        {
+            return;
+        }
+
         ObjectPoolManager.instance.Spawn(enemies[enemyIndex],
-            enemiesSpawnPoints[enemyIndex].transform.position,
+            spawnPosition,
             Quaternion.identity);
     }
 

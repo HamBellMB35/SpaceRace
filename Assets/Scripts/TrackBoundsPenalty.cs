@@ -95,6 +95,33 @@ public class TrackBoundsPenalty : MonoBehaviour
     public void ForceStopTracking()
     {
         isTrackingEnabled = false;
+        ClearActiveFeedback();
+    }
+
+    /// <summary>
+    /// Immediately hides the countdown/title, stops the looping warning
+    /// sound, and resets the grace timer - like ForceStopTracking() above,
+    /// but WITHOUT permanently disabling tracking. Use this for a
+    /// TEMPORARY interruption (a respawn is about to begin, but tracking
+    /// should resume once it's over) rather than a permanent one (the run
+    /// being completely over, where ForceStopTracking() is the right call
+    /// instead).
+    ///
+    /// Called by RespawnSequence the instant ANY respawn begins - not just
+    /// the ones caused by this script's own grace timer running out (that
+    /// path already stops itself before ever asking for a respawn), but
+    /// also the case that was previously falling through the cracks:
+    /// dying to an obstacle collision while mid-flash from a
+    /// not-yet-expired out-of-bounds warning. That death path never went
+    /// through this script's own Update() logic at all, and RespawnSequence
+    /// disabling isTrackingEnabled only stops FUTURE updates - it doesn't
+    /// silence whatever's already actively playing. Without this method,
+    /// the alarm would just keep looping, uninterrupted, all the way
+    /// through the respawn sequence, only finally stopping once gameplay
+    /// resumed and the ship happened to already be back inside the track.
+    /// </summary>
+    public void ClearActiveFeedback()
+    {
         timeOutsideBounds = 0f;
         SetOutOfBoundsFeedbackActive(false);
     }
