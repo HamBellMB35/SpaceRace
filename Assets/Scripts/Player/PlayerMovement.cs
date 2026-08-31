@@ -75,6 +75,11 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Max pitch angle applied when moving up/down. (Same naming quirk as above, just for the vertical axis.)")]
     public float maxRotationAngleY = 10f;
 
+    [Header("Input")]
+    [Tooltip("Shapes how far the stick is pushed into how much actual turning strength you get, instead of a straight 1-to-1 relationship. A value of 1 means untouched/linear - push the stick 30% of the way, get 30% speed. Anything higher than 1 curves that relationship so small pushes near the center give an even GENTLER, smaller change (great for fine, careful adjustments), while pushing all the way to the edge still always gives exactly full speed no matter what this is set to. 2 is a good starting point - try 3 for even more fine control near the center, or bring it back toward 1 if it starts feeling like it takes too big a push to get moving at all.")]
+    [Range(1f, 4f)]
+    public float inputResponseCurve = 2f;
+
     // Cached input values, read fresh every rendered frame in Update() and
     // then consumed by FixedUpdate() whenever the physics engine actually
     // steps - possibly multiple times per rendered frame, or less than
@@ -140,6 +145,36 @@ public class PlayerMovement : MonoBehaviour
         // responsive, but the values just sit cached until FixedUpdate
         // actually consumes them below.
         Vector2 moveInput = controls.Gameplay.Move.ReadValue<Vector2>();
+
+        // Reshaping the input's STRENGTH (its magnitude) without touching
+        // its DIRECTION - moveInput.normalized always points the exact same
+        // way the stick is actually being pushed, so this only ever changes
+        // how far the ship reacts, never which way. Raising a number
+        // between 0 and 1 to a power greater than 1 pushes small numbers
+        // down much harder than big ones - for example 0.2 to the power of
+        // 2 is only 0.04 (barely any speed at all), while 1.0 to the power
+        // of 2 is still exactly 1.0 either way. That's the entire trick:
+        // small stick movements near the center get squashed down into
+        // tiny, easy-to-control speed changes, while a full push to the
+        // edge is completely unaffected and still means full speed - the
+        // same idea as a "sensitivity curve" in racing or flight games.
+        // Application.isMobilePlatform (true only on real Android/iOS
+        // builds, false on PC/Mac/Editor) keeps this curve exclusive to
+        // Android. Keyboard input on PC was already unaffected either way
+        // - see the tooltip above, it's always exactly 0 or 1 - but this
+        // extra check also guarantees a gamepad plugged into a PC stays
+        // completely untouched by this curve too, not just the keyboard.
+        if (Application.isMobilePlatform)
+        {
+            float rawMagnitude = moveInput.magnitude;
+
+            if (rawMagnitude > 0f)
+            {
+                float curvedMagnitude = Mathf.Pow(rawMagnitude, inputResponseCurve);
+                moveInput = moveInput.normalized * curvedMagnitude;
+            }
+        }
+
         xInput = moveInput.x;
         yInput = moveInput.y;
     }

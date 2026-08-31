@@ -1,21 +1,41 @@
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Serialization;
 
-// The central hub for game state - this is the thing everything else in
-// the game talks to when it needs to know or change "how's the run going."
-// It tracks score and laser ammo, keeps the two UI text elements in sync
-// with those numbers, and handles swapping between the gameplay UI and the
-// game-over screen.
+// The central COORDINATOR for game state - the thing everything else in
+// the game still talks to when it needs to know or change "how's the run
+// going." That part hasn't changed.
 //
-// Notice this uses a static singleton (gmInstance) instead of, say, every
-// script holding its own reference dragged in via the Inspector. That's a
-// deliberate (if old-school) pattern here: since there's only ever one
-// GameManager in the scene, anything anywhere can just call
-// GameManager.gmInstance.WhateverMethod() without needing a wired-up
-// reference. The tradeoff is it's a bit of a "God object" that everything
-// depends on globally - fine for a project this size, but worth knowing
-// the pattern by name if this comes up in an interview.
+// What HAS changed: this used to also be the thing that did every bit of
+// actual number-crunching itself - incrementing score, decrementing ammo,
+// deciding when lives ran out - all mixed in with Unity-specific concerns
+// like updating Text elements, showing/hiding UI panels, and holding the
+// static singleton reference. That's the textbook definition of a "God
+// object": one class doing several genuinely separate jobs at once, which
+// makes it harder to test (you can't check "does losing a life work
+// right" without a whole scene and Play Mode) and harder to reason about
+// (every new feature's first instinct is "I'll just add it to
+// GameManager," since that's where everything else already lives).
+//
+// The fix here is a common, low-risk pattern: keep GameManager as the
+// single Unity-facing coordinator - same public methods, same Inspector
+// fields, same static gmInstance access point, so NOTHING else in the
+// project needed to change - but move the actual counting logic for
+// score, laser ammo, and lives out into three small, plain C# classes
+// (ScoreTracker, LaserAmmoTracker, LivesTracker) that know nothing about
+// UI, GameObjects, or scenes at all. GameManager now just asks each
+// tracker "what happened?" and reacts to the answer by updating the
+// screen - it coordinates, rather than personally doing everyone's job.
+// Those three classes can now be unit-tested directly and instantly, with
+// no scene required (see Assets/Tests/EditMode) - something that was
+// simply impossible while this logic was tangled up in here.
+//
+// Still a static singleton, still one GameManager everything reaches into
+// directly - that half of the original tradeoff is unchanged, and still
+// perfectly reasonable for a project this size. The part that's genuinely
+// better now is that GameManager itself does less, and the parts that
+// used to be hardest to verify are the parts that are easiest to test now.
 //
 // One project-specific wrinkle worth explaining: this project has TWO
 // scenes, each with its own GameManager object - one living quietly in the
@@ -50,7 +70,18 @@ public class GameManager : MonoBehaviour
 
     [Header("Lives / Out-of-Bounds Penalty")]
     [Tooltip("How many times the ship can be caught outside the track before it's actually game over. This is completely separate from hitting a real obstacle, which still ends the run instantly regardless of lives remaining.")]
-    public int lives = 3;
+    // FormerlySerializedAs matters here: this field used to just be called
+    // "lives" and be read/written directly by everything. Renaming it
+    // to startingLives (to make room for a `lives` PROPERTY below that
+    // reads/writes the live LivesTracker instead) would otherwise silently
+    // reset every scene/prefab that already had a custom value configured
+    // here back to this default the next time Unity re-serializes it -
+    // this attribute tells Unity "this is the same data as the old
+    // 'lives' field, just under a new name," so nothing already set in
+    // the Inspector gets lost.
+    [FormerlySerializedAs("lives")]
+    [SerializeField]
+    private int startingLives = 3;
 
     [Tooltip("The three ship-silhouette icons - gets told to update its display every time lives changes, so the UI never has to be manually kept in sync.")]
     public LivesDisplay livesDisplay;
@@ -61,12 +92,70 @@ public class GameManager : MonoBehaviour
     [Tooltip("Force-stopped the instant the run ends (see EndGame() below) - without this, if the game ends while the ship happens to be out of bounds, its countdown/flash/looping alarm would otherwise keep re-triggering forever, since there'd be no respawn sequence left around to ever turn it off.")]
     public TrackBoundsPenalty trackBoundsPenalty;
 
-    public int laserCount = 30;
+    [Header("Laser Ammo")]
+    [Tooltip("How much laser ammo the run starts with.")]
+    [FormerlySerializedAs("laserCount")]
+    [SerializeField]
+    private int startingLaserCount = 30;
 
-    private int score;
+    // The three small trackers doing the actual counting - see the class
+    // comment above for the full reasoning. Built fresh in Awake() below,
+    // from whatever starting values are set in the Inspector.
+    private ScoreTracker scoreTracker;
+    private LaserAmmoTracker laserAmmoTracker;
+    private LivesTracker livesTracker;
+
+    // Kept as a public property (not a field) with the EXACT SAME NAME the
+    // old public field had, specifically so LaserSpawner.cs's existing
+    // `GameManager.gmInstance.laserCount` read keeps compiling and working
+    // completely unchanged. Read-only on purpose - external code has
+    // always only ever READ this value (to check "am I out of ammo"), and
+    // routing every actual CHANGE through UpdateLaserCount()/AddLasers()
+    // below is what keeps the on-screen text guaranteed to stay in sync
+    // with the real number.
+    public int laserCount => laserAmmoTracker.Count;
+
+    // Same idea as laserCount above, but this one needs a SETTER too -
+    // GameManagerTests.cs (and, in principle, anything else that wants to
+    // directly configure a starting condition) assigns to this directly,
+    // e.g. `gameManager.lives = 1`. The property just forwards both
+    // directions to the tracker, so reading and writing "lives" from
+    // outside behaves exactly like it always did, even though a plain
+    // int field isn't what's actually storing the number anymore.
+    public int lives
+    {
+        get => livesTracker.Remaining;
+        set => livesTracker.SetRemaining(value);
+    }
 
     private void Awake()
     {
+        // Explicitly requesting 60 FPS here, mainly for Android's benefit.
+        // Without this line, Application.targetFrameRate defaults to -1
+        // ("run as fast as the platform naturally allows") - and on a lot
+        // of Android devices that quietly settles at something like 30fps
+        // instead of the 60 you get for free on PC. Half the framerate
+        // isn't just choppier to look at - it means Update() (where all
+        // your input reading happens) only runs half as often, so every
+        // stick movement genuinely takes longer to be noticed and reacted
+        // to. That alone is enough to make controls feel sluggish AND make
+        // incoming obstacles feel like they're rushing at you faster than
+        // they really are, even though nothing about the actual movement
+        // or spawn-timing code changed at all. This runs once, in whichever
+        // scene's GameManager wakes up first (the menu's or the gameplay
+        // one), and stays in effect for the rest of the app's lifetime.
+        Application.targetFrameRate = 60;
+
+        // Build the trackers right away, using whatever starting values
+        // are currently set - whether that's the Inspector's serialized
+        // value (the normal case) or a plain C# default (the case for a
+        // test that does `gameObject.AddComponent<GameManager>()` with
+        // nothing configured). Either way, laserCount/lives are safely
+        // readable and writable from the very first line after this.
+        scoreTracker = new ScoreTracker();
+        laserAmmoTracker = new LaserAmmoTracker(startingLaserCount);
+        livesTracker = new LivesTracker(startingLives);
+
         // If a second GameManager shows up in the SAME scene at the same
         // time, that's a genuine setup mistake (as opposed to the
         // menu-scene/gameplay-scene split described above, which is two
@@ -102,7 +191,7 @@ public class GameManager : MonoBehaviour
         // of the run.
         if (livesDisplay != null)
         {
-            livesDisplay.SetLivesRemaining(lives);
+            livesDisplay.SetLivesRemaining(livesTracker.Remaining);
         }
     }
 
@@ -118,7 +207,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void LoseLife()
     {
-        lives--;
+        bool isGameOver = livesTracker.LoseOne();
 
         if (livesDisplay == null)
         {
@@ -126,10 +215,10 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            livesDisplay.SetLivesRemaining(lives);
+            livesDisplay.SetLivesRemaining(livesTracker.Remaining);
         }
 
-        if (lives <= 0)
+        if (isGameOver)
         {
             EndGame();
             return;
@@ -141,12 +230,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // Passing 'lives' along here (rather than RespawnSequence just
-        // asking GameManager for it later) is what lets RespawnSequence
-        // know WHICH icon to flash once gameplay resumes, without needing
-        // its own reference back to GameManager - it just remembers
-        // whatever number it was handed at the start of this sequence.
-        respawnSequence.BeginRespawnSequence(lives);
+        // Passing the remaining count along here (rather than
+        // RespawnSequence just asking GameManager for it later) is what
+        // lets RespawnSequence know WHICH icon to flash once gameplay
+        // resumes, without needing its own reference back to GameManager -
+        // it just remembers whatever number it was handed at the start of
+        // this sequence.
+        respawnSequence.BeginRespawnSequence(livesTracker.Remaining);
     }
 
     /// <summary>Ends the current run: hides gameplay UI and shows the final score screen.</summary>
@@ -172,12 +262,25 @@ public class GameManager : MonoBehaviour
     /// <summary>Loads the main gameplay scene.</summary>
     public void LoadGame()
     {
-        SceneManager.LoadScene(0);
+        // Loading by NAME instead of by build index (0, 1, 2...) on purpose
+        // here. A hardcoded number like SceneManager.LoadScene(0) only
+        // means "whatever scene happens to currently sit in that exact slot
+        // in File > Build Settings" - so the moment you reorder scenes
+        // there (like moving the menu scene to the top so it plays first),
+        // this line silently starts pointing at a completely different
+        // scene than the one it was written for, with no error or warning
+        // anywhere. That's exactly what caused "New Game" to just reload
+        // the menu over and over - this used to be scene index 0 back when
+        // GamePlayScene WAS index 0, and it never got updated after the
+        // build order changed. Loading by name instead means this line
+        // keeps working correctly no matter what order your scenes are
+        // listed in going forward.
+        SceneManager.LoadScene("GamePlayScene");
     }
 
     public void UpdateScore()
     {
-        score += 100;
+        int newScore = scoreTracker.AddPoints();
 
         // Same "warn once, skip gracefully" pattern in both branches below:
         // the actual score number always increments correctly above,
@@ -191,7 +294,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            scoreText.text = "Score = " + score;
+            scoreText.text = "Score = " + newScore;
         }
 
         if (finalScoreText == null)
@@ -200,31 +303,24 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            finalScoreText.text = "Final Score = " + score;
+            finalScoreText.text = "Final Score = " + newScore;
         }
     }
 
     /// <summary>Called every time the player fires a laser - spends one shot of ammo.</summary>
     public void UpdateLaserCount()
     {
-        if (laserCount <= 0)
+        // The actual ammo count always spends correctly (or safely does
+        // nothing if it was already at 0), whether or not the on-screen
+        // text is wired up - firing shouldn't stop working just because a
+        // UI label is missing. Only bother touching the text at all if a
+        // shot was genuinely spent.
+        if (!laserAmmoTracker.TrySpendOne())
         {
-            laserCount = 0;
             return;
         }
 
-        // The actual ammo count always spends correctly, whether or not
-        // the on-screen text is wired up - firing shouldn't stop working
-        // just because a UI label is missing.
-        laserCount--;
-
-        if (laserCountText == null)
-        {
-            Debug.LogWarning($"[GameManager] 'laserCountText' isn't assigned on '{name}' - ammo is still being spent correctly, it just isn't shown on screen.", this);
-            return;
-        }
-
-        laserCountText.text = "Laser = " + laserCount;
+        UpdateLaserCountText("ammo is still being spent correctly, it just isn't shown on screen");
     }
 
     /// <summary>
@@ -237,15 +333,23 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void AddLasers(int amount)
     {
-        laserCount += amount;
+        laserAmmoTracker.Add(amount);
+        UpdateLaserCountText("the bonus ammo was still granted, it just isn't shown on screen");
+    }
 
+    // Shared by UpdateLaserCount() and AddLasers() above - both need to do
+    // the exact same "show the current ammo count, or warn once if there's
+    // nowhere to show it" work after changing the number by a different
+    // amount, so the actual text-updating logic lives here just once.
+    private void UpdateLaserCountText(string warningContext)
+    {
         if (laserCountText == null)
         {
-            Debug.LogWarning($"[GameManager] 'laserCountText' isn't assigned on '{name}' - the bonus ammo was still granted, it just isn't shown on screen.", this);
+            Debug.LogWarning($"[GameManager] 'laserCountText' isn't assigned on '{name}' - {warningContext}.", this);
             return;
         }
 
-        laserCountText.text = "Laser = " + laserCount;
+        laserCountText.text = "Laser = " + laserAmmoTracker.Count;
     }
 
     private void DisableGameplayUI()

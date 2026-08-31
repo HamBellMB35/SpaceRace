@@ -1,2 +1,31 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Git LFS - large binary asset types. Anything matching one of these
+# patterns gets stored by Git LFS (as a small pointer file in the actual
+# git history, with the real file content stored separately) instead of
+# bloating the repository's normal history the way a growing collection of
+# multi-megabyte audio/image/model files otherwise would over time. This
+# only affects files added or changed AFTER this file is in place - it
+# does not retroactively move anything already committed. If you want
+# existing large files (like the music tracks already under Assets/Sounds)
+# moved into LFS too, that's a one-time `git lfs migrate import` command
+# run from a terminal, not something this file does on its own.
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.tga filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.mp3 filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.apk filter=lfs diff=lfs merge=lfs -text
+*.aab filter=lfs diff=lfs merge=lfs -text

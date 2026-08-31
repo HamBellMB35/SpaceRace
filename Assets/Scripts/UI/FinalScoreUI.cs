@@ -38,6 +38,18 @@ public class FinalScoreUI : MonoBehaviour
 
     private void OnAnyButtonPressed(InputControl control)
     {
-        SceneManager.LoadScene(1);
+        // Loading by NAME instead of a hardcoded build index (1) - the
+        // exact same fix, and the exact same reason, as GameManager's
+        // LoadGame() method: a bare number like SceneManager.LoadScene(1)
+        // just means "whichever scene currently sits in that slot in
+        // File > Build Settings," which silently changes meaning any time
+        // scenes get reordered there. This used to correctly point at the
+        // menu scene back when UI_v2 was at index 1, but after moving
+        // UI_v2 to the top (index 0) so it plays first, index 1 became
+        // GamePlayScene instead - which is exactly why "press any key" on
+        // the game-over screen started restarting the run instead of
+        // returning to the main menu. Loading "UI_v2" by name means this
+        // keeps working correctly no matter what order the scenes are in.
+        SceneManager.LoadScene("UI_v2");
     }
 }
